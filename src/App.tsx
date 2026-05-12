@@ -234,6 +234,7 @@ export default function App() {
 
   const handleToday = () => {
     setViewDate(new Date());
+    setViewMode("month");
   };
 
   const getHeaderText = () => {
