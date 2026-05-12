@@ -418,8 +418,8 @@ export default function App() {
 
     const days = [];
     const emptyCellClass = isLarge
-      ? "w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14"
-      : "w-7 h-7 md:w-8 md:h-8";
+      ? "mx-auto w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12"
+      : "mx-auto w-7 h-7 md:w-8 md:h-8";
 
     for (let i = 0; i < startDayOfWeek; i++) {
       days.push(<div key={`empty-${i}`} className={emptyCellClass}></div>);
@@ -433,7 +433,7 @@ export default function App() {
       const hasNote = !!overrides[key]?.note;
       const hasReminder = overrides[key]?.reminder?.enabled;
 
-      let baseClasses = `flex items-center justify-center rounded-full font-medium transition-colors relative cursor-pointer group-hover:opacity-80 ${isLarge ? "w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 text-sm sm:text-base md:text-lg" : "w-7 h-7 md:w-8 md:h-8 text-[11px] md:text-sm"}`;
+      let baseClasses = `mx-auto flex items-center justify-center rounded-full font-medium transition-colors relative cursor-pointer group-hover:opacity-80 ${isLarge ? "w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-sm sm:text-base md:text-lg" : "w-7 h-7 md:w-8 md:h-8 text-[11px] md:text-sm"}`;
       let stateClasses = "";
 
       if (state === "work") {
@@ -1004,7 +1004,7 @@ export default function App() {
             </div>
           )}
           {viewMode === "month" && (
-            <div className="max-w-4xl mx-auto w-full">
+            <div className="max-w-[500px] mx-auto w-full">
               {renderMonth(viewDate.getMonth(), true)}
             </div>
           )}
