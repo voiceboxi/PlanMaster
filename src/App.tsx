@@ -210,7 +210,13 @@ export default function App() {
       try {
         const decoded = decodeURIComponent(atob(hash));
         const data = JSON.parse(decoded);
-        if (data.year) setViewDate(new Date(data.year, 0, 1));
+        if (data.year) {
+          const m = data.month !== undefined ? data.month : 0;
+          setViewDate(new Date(data.year, m, 1));
+        }
+        if (data.viewMode) {
+          setViewMode(data.viewMode);
+        }
         if (data.overrides) setOverrides(data.overrides);
       } catch (e) {
         console.error("Invalid share link", e);
@@ -375,7 +381,12 @@ export default function App() {
   };
 
   const getShareLink = () => {
-    const data = JSON.stringify({ year, overrides });
+    const data = JSON.stringify({ 
+      year, 
+      month: viewDate.getMonth(),
+      viewMode,
+      overrides 
+    });
     const encoded = btoa(encodeURIComponent(data));
     return `${window.location.origin}${window.location.pathname}#${encoded}`;
   };
