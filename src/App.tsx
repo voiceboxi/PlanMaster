@@ -125,7 +125,7 @@ const getDateKey = (date: Date) => {
 export default function App() {
   const [viewDate, setViewDate] = useState<Date>(new Date());
   type ViewMode = "annual" | "month";
-  const [viewMode, setViewMode] = useState<ViewMode>("annual");
+  const [viewMode, setViewMode] = useState<ViewMode>("month");
   const year = viewDate.getFullYear();
 
   const [overrides, setOverrides] = useState<CustomOverrides>({});
@@ -418,7 +418,7 @@ export default function App() {
 
     const days = [];
     const emptyCellClass = isLarge
-      ? "w-10 h-10 md:w-14 md:h-14"
+      ? "w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14"
       : "w-7 h-7 md:w-8 md:h-8";
 
     for (let i = 0; i < startDayOfWeek; i++) {
@@ -433,7 +433,7 @@ export default function App() {
       const hasNote = !!overrides[key]?.note;
       const hasReminder = overrides[key]?.reminder?.enabled;
 
-      let baseClasses = `flex items-center justify-center rounded-full font-medium transition-colors relative cursor-pointer group-hover:opacity-80 ${isLarge ? "w-10 h-10 md:w-14 md:h-14 text-base md:text-lg" : "w-7 h-7 md:w-8 md:h-8 text-[11px] md:text-sm"}`;
+      let baseClasses = `flex items-center justify-center rounded-full font-medium transition-colors relative cursor-pointer group-hover:opacity-80 ${isLarge ? "w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 text-sm sm:text-base md:text-lg" : "w-7 h-7 md:w-8 md:h-8 text-[11px] md:text-sm"}`;
       let stateClasses = "";
 
       if (state === "work") {
@@ -501,7 +501,7 @@ export default function App() {
       <div
         id={id}
         key={monthIndex}
-        className={`bg-white rounded-2xl ${isLarge ? "p-6 md:p-8" : "p-5"} shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-slate-100/50 flex flex-col w-full`}
+        className={`bg-white rounded-2xl ${isLarge ? "p-4 sm:p-6 md:p-8" : "p-5"} shadow-[0_2px_12px_rgba(0,0,0,0.04)] border border-slate-100/50 flex flex-col w-full`}
       >
         <h3
           className={`text-center font-semibold text-slate-800 ${isLarge ? "text-xl md:text-2xl mb-6" : "mb-4"}`}
@@ -584,8 +584,8 @@ export default function App() {
             <div className="flex bg-[#f8fafc] p-1 rounded-xl border border-slate-200 hide-scrollbar overflow-x-auto">
               {(
                 [
-                  ["annual", "Année"],
                   ["month", "Mois"],
+                  ["annual", "Année"],
                 ] as [ViewMode, string][]
               ).map(([mode, label]) => (
                 <button
