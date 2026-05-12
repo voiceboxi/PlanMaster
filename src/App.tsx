@@ -150,6 +150,11 @@ export default function App() {
   const [pdfViewType, setPdfViewType] = useState<"condensed" | "detailed">(
     "condensed",
   );
+  const [pdfSelectedMonth, setPdfSelectedMonth] = useState<number>(
+    new Date().getMonth(),
+  );
+
+  const [isLegendExpanded, setIsLegendExpanded] = useState(false);
 
   const [currentTime, setCurrentTime] = useState(new Date());
   const [triggeredReminders, setTriggeredReminders] = useState<Set<string>>(
@@ -305,15 +310,19 @@ export default function App() {
     XLSX.writeFile(wb, `Planning-${year}.xlsx`);
   };
 
-  const generatePDF = async () => {
+  const generatePDF = async (action: "download" | "print" = "download") => {
     setIsPdfModalOpen(false);
+    setIsShareModalOpen(false);
     setIsGeneratingPDF(true);
     // Small delay to let the UI render the loading spinner before the main thread is blocked
     await new Promise((resolve) => setTimeout(resolve, 50));
 
     try {
-      if (pdfViewType === "condensed") {
-        const pdf = new jsPDF("p", "mm", "a4");
+      const typeToRender = action === "print" ? "condensed" : pdfViewType;
+
+      let pdf: jsPDF;
+      if (typeToRender === "condensed") {
+        pdf = new jsPDF("p", "mm", "a4");
         const docWidth = pdf.internal.pageSize.getWidth();
 
         const element = document.getElementById("pdf-condensed-page");
@@ -326,28 +335,35 @@ export default function App() {
           const pdfHeight = (imgProps.height * docWidth) / imgProps.width;
           pdf.addImage(imgData, "PNG", 0, 0, docWidth, pdfHeight);
         }
-
-        pdf.save(`PlanMaster-${year}-Condense.pdf`);
       } else {
-        const pdf = new jsPDF("p", "mm", "a4");
+        pdf = new jsPDF("p", "mm", "a4");
         const docWidth = pdf.internal.pageSize.getWidth();
 
-        for (let i = 0; i < 12; i++) {
-          if (i > 0) pdf.addPage();
+        const element = document.getElementById(
+          `pdf-detailed-page-${pdfSelectedMonth}`,
+        );
+        if (element) {
+          const imgData = await toPng(element, {
+            pixelRatio: 2,
+            backgroundColor: "#ffffff",
+          });
+          const imgProps = pdf.getImageProperties(imgData);
+          const pdfHeight = (imgProps.height * docWidth) / imgProps.width;
 
-          const element = document.getElementById(`pdf-detailed-page-${i}`);
-          if (element) {
-            const imgData = await toPng(element, {
-              pixelRatio: 2,
-              backgroundColor: "#ffffff",
-            });
-            const imgProps = pdf.getImageProperties(imgData);
-            const pdfHeight = (imgProps.height * docWidth) / imgProps.width;
-
-            pdf.addImage(imgData, "PNG", 0, 0, docWidth, pdfHeight);
-          }
+          pdf.addImage(imgData, "PNG", 0, 0, docWidth, pdfHeight);
         }
-        pdf.save(`PlanMaster-${year}-Detaille.pdf`);
+      }
+
+      if (action === "print") {
+        pdf.autoPrint();
+        const blob = pdf.output("bloburl");
+        window.open(blob, "_blank");
+      } else {
+        const filename =
+          typeToRender === "condensed"
+            ? `PlanMaster-${year}-Condense.pdf`
+            : `PlanMaster-${year}-${MONTHS[pdfSelectedMonth]}.pdf`;
+        pdf.save(filename);
       }
     } catch (error) {
       console.error(error);
@@ -401,7 +417,9 @@ export default function App() {
     let startDayOfWeek = firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1;
 
     const days = [];
-    const emptyCellClass = isLarge ? "w-10 h-10 md:w-14 md:h-14" : "w-8 h-8";
+    const emptyCellClass = isLarge
+      ? "w-10 h-10 md:w-14 md:h-14"
+      : "w-7 h-7 md:w-8 md:h-8";
 
     for (let i = 0; i < startDayOfWeek; i++) {
       days.push(<div key={`empty-${i}`} className={emptyCellClass}></div>);
@@ -415,7 +433,7 @@ export default function App() {
       const hasNote = !!overrides[key]?.note;
       const hasReminder = overrides[key]?.reminder?.enabled;
 
-      let baseClasses = `flex items-center justify-center rounded-full font-medium transition-colors relative cursor-pointer group-hover:opacity-80 ${isLarge ? "w-10 h-10 md:w-14 md:h-14 text-base md:text-lg" : "w-8 h-8 text-sm"}`;
+      let baseClasses = `flex items-center justify-center rounded-full font-medium transition-colors relative cursor-pointer group-hover:opacity-80 ${isLarge ? "w-10 h-10 md:w-14 md:h-14 text-base md:text-lg" : "w-7 h-7 md:w-8 md:h-8 text-[11px] md:text-sm"}`;
       let stateClasses = "";
 
       if (state === "work") {
@@ -541,18 +559,18 @@ export default function App() {
       </header>
 
       {/* Main Content */}
-      <main className="w-full max-w-[1400px] px-6 mt-8 flex flex-col gap-6">
+      <main className="w-full max-w-[1400px] px-3 md:px-6 mt-4 md:mt-8 flex flex-col gap-4 md:gap-6">
         {/* Toolbar */}
-        <div className="bg-white p-3 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex justify-between items-center flex-wrap gap-4">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex items-center bg-[#f8fafc] rounded-xl border border-slate-200 p-1">
+        <div className="bg-white p-3 md:p-4 rounded-xl md:rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex flex-col lg:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3 md:gap-4 flex-wrap w-full lg:w-auto justify-center lg:justify-start">
+            <div className="flex items-center bg-[#f8fafc] rounded-xl border border-slate-200 p-1 flex-1 sm:flex-none justify-between sm:justify-start">
               <button
                 onClick={handlePrev}
                 className="p-2 hover:bg-white rounded-lg transition-colors text-slate-600"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="px-6 font-bold text-lg text-slate-800 tracking-tight min-w-[120px] text-center">
+              <span className="px-2 md:px-6 font-bold text-base md:text-lg text-slate-800 tracking-tight min-w-[100px] md:min-w-[120px] text-center">
                 {getHeaderText()}
               </span>
               <button
@@ -563,7 +581,7 @@ export default function App() {
               </button>
             </div>
 
-            <div className="flex bg-[#f8fafc] p-1 rounded-xl border border-slate-200 hide-scrollbar">
+            <div className="flex bg-[#f8fafc] p-1 rounded-xl border border-slate-200 hide-scrollbar overflow-x-auto">
               {(
                 [
                   ["annual", "Année"],
@@ -573,7 +591,7 @@ export default function App() {
                 <button
                   key={mode}
                   onClick={() => setViewMode(mode)}
-                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${viewMode === mode ? "bg-white text-slate-800 shadow-sm border border-slate-200/50" : "text-slate-500 hover:text-slate-700"}`}
+                  className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap ${viewMode === mode ? "bg-white text-slate-800 shadow-sm border border-slate-200/50" : "text-slate-500 hover:text-slate-700"}`}
                 >
                   {label}
                 </button>
@@ -582,17 +600,24 @@ export default function App() {
 
             <button
               onClick={handleToday}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-700 font-semibold rounded-xl transition-colors shrink-0"
+              className="hidden lg:flex items-center gap-2 px-5 py-2.5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-700 font-semibold rounded-xl transition-colors shrink-0"
             >
               <CalendarIcon className="w-5 h-5" />
               Aujourd'hui
             </button>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3 w-full lg:w-auto flex-wrap justify-center">
+            <button
+              onClick={handleToday}
+              className="flex lg:hidden items-center gap-2 px-3 sm:px-4 py-2.5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-700 font-semibold rounded-xl transition-colors flex-1 sm:flex-none justify-center whitespace-nowrap text-sm"
+            >
+              <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+              Aujourd'hui
+            </button>
             <button
               onClick={handleExportExcel}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-700 font-semibold rounded-xl transition-colors"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-700 font-semibold rounded-xl transition-colors flex-1 sm:flex-none justify-center whitespace-nowrap text-sm"
             >
               <FileSpreadsheet className="w-4 h-4" />
               Excel
@@ -600,12 +625,12 @@ export default function App() {
             <button
               onClick={() => setIsPdfModalOpen(true)}
               disabled={isGeneratingPDF}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-700 font-semibold rounded-xl transition-colors disabled:opacity-70 min-w-[120px] justify-center"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-[#e2e8f0] hover:bg-[#cbd5e1] text-slate-700 font-semibold rounded-xl transition-colors disabled:opacity-70 flex-1 sm:flex-none justify-center whitespace-nowrap text-sm min-w-[100px]"
             >
               {isGeneratingPDF ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-[#10a37f]" />
-                  Création...
+                  Création
                 </>
               ) : (
                 <>
@@ -616,7 +641,7 @@ export default function App() {
             </button>
             <button
               onClick={() => setIsShareModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-[#10a37f] hover:bg-[#0c8c6c] text-white font-medium rounded-xl transition-all shadow-sm shadow-[#10a37f]/20 active:scale-95"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2.5 bg-[#10a37f] hover:bg-[#0c8c6c] text-white font-medium rounded-xl transition-all shadow-sm shadow-[#10a37f]/20 active:scale-95 flex-[2] sm:flex-none justify-center whitespace-nowrap text-sm"
             >
               <Share2 className="w-4 h-4" />
               Partager
@@ -625,17 +650,36 @@ export default function App() {
         </div>
 
         {/* Legend */}
-        <div className="bg-white px-6 py-4 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex items-center justify-start gap-8 flex-wrap">
-          <span className="font-semibold text-slate-700 mr-2">Légende</span>
-          {LEGEND.map((item) => (
-            <div key={item.id} className="flex items-center gap-2">
-              <div className={`w-4 h-4 rounded-full ${item.dotClass}`}></div>
-              <span className="text-sm font-medium text-slate-500">
-                {item.label}
-              </span>
-            </div>
-          ))}
-          <div className="flex justify-end flex-grow text-xs text-slate-400">
+        <div className="bg-white px-4 md:px-6 py-4 rounded-xl md:rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-slate-100 flex items-center justify-start flex-wrap gap-y-3 gap-x-4">
+          <button
+            onClick={() => setIsLegendExpanded(!isLegendExpanded)}
+            className="flex items-center gap-2 font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 px-3 md:px-4 py-1.5 md:py-2 rounded-xl transition-colors border border-slate-200 shrink-0"
+          >
+            Légende
+            <ChevronRight
+              className={`w-4 h-4 transition-transform duration-300 ${isLegendExpanded ? "rotate-90 md:rotate-180" : ""}`}
+            />
+          </button>
+
+          <div
+            className={`flex flex-wrap md:flex-nowrap items-center gap-3 md:gap-6 overflow-hidden transition-all duration-500 ease-in-out shrink-0 ${isLegendExpanded ? "md:max-w-[1000px] max-w-full max-h-[500px] md:max-h-20 opacity-100" : "max-w-0 max-h-0 opacity-0"}`}
+          >
+            {LEGEND.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-2 whitespace-nowrap"
+              >
+                <div
+                  className={`w-3.5 h-3.5 md:w-4 md:h-4 rounded-full ${item.dotClass}`}
+                ></div>
+                <span className="text-xs md:text-sm font-medium text-slate-500">
+                  {item.label}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex-grow flex justify-center items-center text-xs text-slate-400 w-full md:w-auto">
             Astuce : Cliquez sur un jour pour modifier son statut
           </div>
         </div>
@@ -968,8 +1012,16 @@ export default function App() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-16 text-center text-sm font-medium text-slate-400">
-        © {year} PlanMaster - Tous droits réservés - Création JixVbx
+      <footer className="mt-16 text-center text-sm px-4 font-medium text-slate-400">
+        © {year} PlanMaster - Tous droits réservés - Création par{" "}
+        <a
+          href="https://freemastergoo.byethost7.com/?i=2"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[#10a37f] hover:underline whitespace-nowrap"
+        >
+          WebmasterGO
+        </a>
       </footer>
 
       {/* Modals & Overlays */}
@@ -1011,21 +1063,41 @@ export default function App() {
 
               <div
                 onClick={() => setPdfViewType("detailed")}
-                className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex items-start gap-4 ${pdfViewType === "detailed" ? "border-[#10a37f] bg-[#10a37f]/5" : "border-slate-100 hover:border-slate-200"}`}
+                className={`cursor-pointer p-4 rounded-xl border-2 transition-all flex flex-col gap-3 ${pdfViewType === "detailed" ? "border-[#10a37f] bg-[#10a37f]/5" : "border-slate-100 hover:border-slate-200"}`}
               >
-                <div
-                  className={`p-2 rounded-lg ${pdfViewType === "detailed" ? "bg-[#10a37f] text-white" : "bg-slate-100 text-slate-500"}`}
-                >
-                  <List className="w-5 h-5" />
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`p-2 rounded-lg ${pdfViewType === "detailed" ? "bg-[#10a37f] text-white" : "bg-slate-100 text-slate-500"}`}
+                  >
+                    <List className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-slate-800 text-sm">
+                      Vue détaillée (1 mois)
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Télécharger un mois spécifique, formaté pour feuille A4.
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h4 className="font-semibold text-slate-800 text-sm">
-                    Vue détaillée
-                  </h4>
-                  <p className="text-xs text-slate-500 mt-1">
-                    1 mois par page avec événements, vacances et congés.
-                  </p>
-                </div>
+                {pdfViewType === "detailed" && (
+                  <div className="pl-[52px]">
+                    <select
+                      value={pdfSelectedMonth}
+                      onChange={(e) =>
+                        setPdfSelectedMonth(Number(e.target.value))
+                      }
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full border-slate-200 rounded-lg shadow-sm focus:border-[#10a37f] focus:ring focus:ring-[#10a37f]/20 py-2 px-3 border text-sm outline-none transition-all bg-white"
+                    >
+                      {MONTHS.map((month, index) => (
+                        <option key={index} value={index}>
+                          {month}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
             <div className="px-6 py-4 bg-slate-50 flex justify-end gap-3 rounded-b-2xl border-t border-slate-100">
@@ -1036,7 +1108,7 @@ export default function App() {
                 Annuler
               </button>
               <button
-                onClick={generatePDF}
+                onClick={() => generatePDF()}
                 className="px-5 py-2.5 bg-[#10a37f] hover:bg-[#0c8c6c] text-white font-medium rounded-xl transition-all shadow-sm shadow-[#10a37f]/20 active:scale-95 text-sm flex items-center gap-2"
               >
                 <Download className="w-4 h-4" />
@@ -1114,7 +1186,7 @@ export default function App() {
                 {copiedLink ? "Lien copié !" : "Copier le lien"}
               </button>
               <button
-                onClick={() => window.print()}
+                onClick={() => generatePDF("print")}
                 className="flex items-center gap-4 w-full p-3 hover:bg-slate-50 rounded-xl transition-colors text-left text-slate-700 font-medium"
               >
                 <div className="bg-purple-100 text-purple-600 p-2.5 rounded-lg">
